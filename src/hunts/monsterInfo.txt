@@ -1,0 +1,2 @@
+Monster;maxHp;maxStamina;music
+TobiKadachi;100;50;GLMediumMonster

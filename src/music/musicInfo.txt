@@ -1,0 +1,2 @@
+Name;Length;LoopStart;LoopEnd
+GLMediumMonster;316348;110565;175564
