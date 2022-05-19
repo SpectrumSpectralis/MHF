@@ -129,7 +129,7 @@ public class HuntController{
 
             List<String> command = getRandomCommand(monsterText);
             newMonsterImage = new Image(command.get(0));
-            while(true){
+            while(hunterhp > 0 && monsterhp > 0){
                 Platform.runLater(() -> hunterHealth.setProgress(hunterhp));
                 Platform.runLater(() -> monsterHealth.setProgress(monsterhp));
                 monsterView.setImage(newMonsterImage);
@@ -146,7 +146,7 @@ public class HuntController{
                     startTimer(taskTime);
                     command = getRandomCommand(monsterText);
                     getNextImage(command.get(0));
-                    Thread.sleep(taskTime*1000);
+                    Thread.sleep(taskTime* 1000L);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
