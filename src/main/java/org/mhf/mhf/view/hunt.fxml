@@ -3,12 +3,19 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
 
-<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.mhf.mhf.logic.HuntController">
+<AnchorPane prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.mhf.mhf.logic.HuntController">
    <children>
       <ImageView fx:id="monsterView" fitHeight="560.0" fitWidth="948.0" layoutX="14.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="238.0" AnchorPane.topAnchor="14.0" />
-      <TextArea fx:id="huntingText" layoutX="14.0" layoutY="310.0" prefHeight="160.0" prefWidth="948.0" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" />
-      <TextArea fx:id="timer" layoutX="1005.0" layoutY="626.0" prefHeight="160.0" prefWidth="160.0" AnchorPane.bottomAnchor="14.0" AnchorPane.rightAnchor="35.0" />
+      <TextArea fx:id="huntingText" editable="false" layoutX="14.0" layoutY="310.0" prefHeight="160.0" prefWidth="948.0" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0">
+         <font>
+            <Font name="Arial Italic" size="24.0" />
+         </font></TextArea>
+      <TextArea fx:id="timer" editable="false" layoutX="1005.0" layoutY="626.0" prefHeight="160.0" prefWidth="160.0" AnchorPane.bottomAnchor="14.0" AnchorPane.rightAnchor="35.0">
+         <font>
+            <Font name="System Bold" size="40.0" />
+         </font></TextArea>
       <ProgressBar fx:id="hunterHealthProgressBar" layoutX="1005.0" layoutY="42.0" prefHeight="18.0" prefWidth="160.0" progress="0.0" AnchorPane.rightAnchor="35.0" AnchorPane.topAnchor="42.0" />
       <Label layoutX="1005.0" layoutY="14.0" text="Hunter" AnchorPane.rightAnchor="158.0" AnchorPane.topAnchor="14.0" />
       <Label layoutX="1005.0" layoutY="172.0" text="Monster" AnchorPane.topAnchor="140.0" />

@@ -55,6 +55,8 @@ public class HuntController{
     private List<List<String>> monsterStatusEffects = new ArrayList<>();
     private List<List<String>> hunterAttacks = new ArrayList<>();
     private List<List<String>> hunterCarts = new ArrayList<>();
+    private List<List<String>> hunterRest = new ArrayList<>();
+    private List<List<String>> monsterRest = new ArrayList<>();
 
     private Image newMonsterImage;
     private final Random random = new Random();
@@ -106,8 +108,12 @@ public class HuntController{
                     case "ms": monsterStatusEffects.add(l.subList(1,l.size()));
                         break;
                     case "ha": hunterAttacks.add(l.subList(1,l.size()));
-                    break;
+                        break;
                     case "hc": hunterCarts.add(l.subList(1, l.size()));
+                        break;
+                    case "hr": hunterRest.add(l.subList(1, l.size()));
+                        break;
+                    case "mr": monsterRest.add(l.subList(1, l.size()));
                 }
             }
         } catch (IOException e) {
@@ -213,16 +219,42 @@ public class HuntController{
             }else{
                 availableAttacks = monsterAttacks.stream().filter(n -> Integer.parseInt(n.get(n.size()-1)) <= monsterStamina)
                         .collect(Collectors.toList());
+                if(monsterStamina <= 5){
+                    availableAttacks.addAll(monsterRest);
+                }
                 chosenAttack = availableAttacks.get(random.nextInt(availableAttacks.size()));
-                monsterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
-                hunterhp -= 20;
+                int staminaChange = Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+                if(staminaChange>=0){
+                    monsterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+                }else{
+                    if(monsterStamina - staminaChange > monsterMaxStamina){
+                        monsterStamina = monsterMaxStamina;
+                    }else{
+                        monsterStamina -= staminaChange;
+                    }
+                }
+
+                hunterhp -= 1;
             }
         }else{
             availableAttacks = hunterAttacks.stream().filter(n -> Integer.parseInt(n.get(n.size()-1)) <= hunterStamina)
                     .collect(Collectors.toList());
+            if(hunterStamina <= 5){
+                availableAttacks.addAll(hunterRest);
+            }
             chosenAttack = availableAttacks.get(random.nextInt(availableAttacks.size()));
-            hunterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
-            monsterhp -= 20;
+            int staminaChange = Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+            if(staminaChange>=0){
+                hunterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+            }else{
+                if(hunterStamina - staminaChange > hunterMaxStamina){
+                    hunterStamina = hunterMaxStamina;
+                }else{
+                    hunterStamina -= staminaChange;
+                }
+            }
+
+            monsterhp -= 1;
         }
         if(monsterCharged) monsterChargeDurationLeft-=1;
         if(statusEffectActive) statusDurationLeft-=1;
