@@ -8,12 +8,12 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
 import javax.sound.sampled.*;
-import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -29,24 +29,32 @@ public class HuntController{
     private TextArea timer;
 
     @FXML
-    private ProgressBar hunterHealth;
+    private ProgressBar hunterHealthProgressBar;
 
     @FXML
-    private ProgressBar hunterStamina;
+    private ProgressBar hunterStaminaProgressBar;
 
     @FXML
-    private ProgressBar monsterHealth;
+    private ProgressBar monsterHealthProgressBar;
 
     @FXML
-    private ProgressBar monsterStamina;
+    private ProgressBar monsterStaminaProgressBar;
 
-    private boolean charged = false;
-    private boolean affected = false;
-    private double monsterhp = 1;
-    private double hunterhp = 1;
+    private boolean monsterTurn = true;
+    private boolean monsterCharged = false;
+    private boolean statusEffectActive = false;
+    private int monsterChargeDurationLeft, statusDurationLeft;
+    private double monsterhp, hunterhp, monsterStamina, hunterStamina;
+    private double monsterMaxHp, hunterMaxHp, monsterMaxStamina, hunterMaxStamina;
     private String[] monsterInfo;
     private final String musicLocation = "src/music/";
     private final String huntLocation = "src/hunts/";
+
+    private List<List<String>> monsterAttacks = new ArrayList<>();
+    private List<List<String>> monsterCharges = new ArrayList<>();
+    private List<List<String>> monsterStatusEffects = new ArrayList<>();
+    private List<List<String>> hunterAttacks = new ArrayList<>();
+    private List<List<String>> hunterCarts = new ArrayList<>();
 
     private Image newMonsterImage;
     private final Random random = new Random();
@@ -70,17 +78,47 @@ public class HuntController{
             e.printStackTrace();
             return;
         }
-        Platform.runLater(() -> hunterHealth.setProgress(100));
-        Platform.runLater(() -> monsterHealth.setProgress(Integer.parseInt(monsterInfo[1])));
+
+        monsterMaxHp = Integer.parseInt(monsterInfo[1]);
+        monsterhp = monsterMaxHp;
+        hunterMaxHp = 100;
+        hunterhp = hunterMaxHp;
+        monsterMaxStamina = Integer.parseInt(monsterInfo[2]);
+        monsterStamina = monsterMaxStamina;
+        hunterMaxStamina = 50;
+        hunterStamina = hunterMaxStamina;
+
+        loadMonster();
         startMonsterThread();
         startMusicThread(monsterInfo[3]);
+    }
+
+    private void loadMonster() {
+        Path path = Path.of(huntLocation + monsterToHunt + ".txt");
+        try (Stream<String> textStream = Files.lines(path)) {
+            for (String s : textStream.toList()) {
+                List<String> l = new ArrayList<>(Arrays.stream(s.split(";")).toList());
+                switch (l.get(0)){
+                    case "ma": monsterAttacks.add(l.subList(1,l.size()));
+                        break;
+                    case "mc": monsterCharges.add(l.subList(1,l.size()));
+                        break;
+                    case "ms": monsterStatusEffects.add(l.subList(1,l.size()));
+                        break;
+                    case "ha": hunterAttacks.add(l.subList(1,l.size()));
+                    break;
+                    case "hc": hunterCarts.add(l.subList(1, l.size()));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void startMusicThread(String musicName) {
         String[] musicInfo = {};
         try(Stream<String> musicInfoStream = Files.lines(Path.of(musicLocation + "musicInfo.txt"))){
             for(String s : musicInfoStream.toList()){
-                System.out.println(s);
                 if(s.split(";")[0].equalsIgnoreCase(musicName)){
                     musicInfo = s.split(";");
                 }
@@ -110,41 +148,27 @@ public class HuntController{
 
     private void startMonsterThread() {
         Thread monsterThread = new Thread(() -> {
-            Path path = Path.of(huntLocation + monsterToHunt + ".txt");
-            Map<Integer, List<List<String>>> monsterText = new TreeMap<>();
-            try (Stream<String> textStream = Files.lines(path)) {
-                Integer key;
-                for (String s : textStream.toList()) {
-                    List<String> l = new ArrayList<>(Arrays.stream(s.split(";")).toList());
-                    key = Integer.valueOf(l.get(0));
-                    if (!monsterText.containsKey(key)) {
-                        monsterText.put(key, new ArrayList<>());
-                    }
-                    monsterText.get(key).add(l.subList(1, l.size()));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-            List<String> command = getRandomCommand(monsterText);
+            List<String> command = getRandomCommand();
             newMonsterImage = new Image(command.get(0));
-            while(hunterhp > 0 && monsterhp > 0){
-                Platform.runLater(() -> hunterHealth.setProgress(hunterhp));
-                Platform.runLater(() -> monsterHealth.setProgress(monsterhp));
+            while(monsterhp > 0){
+                Platform.runLater(() -> hunterHealthProgressBar.setProgress(hunterhp/hunterMaxHp));
+                Platform.runLater(() -> monsterHealthProgressBar.setProgress(monsterhp/monsterMaxHp));
+                Platform.runLater(() -> hunterStaminaProgressBar.setProgress(hunterStamina/hunterMaxStamina));
+                Platform.runLater(() -> monsterStaminaProgressBar.setProgress(monsterStamina/monsterMaxStamina));
                 monsterView.setImage(newMonsterImage);
                 int taskTime = 10;
                 huntingText.clear();
                 for(String s : command.subList(1,command.size())){
                     try{
                         taskTime = Integer.parseInt(s);
+                        break;
                     }catch(NumberFormatException nfe){
                         huntingText.appendText(s + "\n");
                     }
                 }
                 try {
                     startTimer(taskTime);
-                    command = getRandomCommand(monsterText);
+                    command = getRandomCommand();
                     getNextImage(command.get(0));
                     Thread.sleep(taskTime* 1000L);
                 } catch (InterruptedException e) {
@@ -162,32 +186,48 @@ public class HuntController{
         imageThread.start();
     }
 
-    private List<String> getRandomCommand(Map<Integer, List<List<String>>> monsterText) {
-        int rand = random.nextInt(10);
-        if(rand <=0){
-            if(charged){
-                charged = false;
-                return monsterText.get(2).get(monsterText.get(2).size()-1);
-            }else{
-                charged = true;
-                return monsterText.get(2).get(random.nextInt(monsterText.get(2).size()-1));
-            }
-        }else if(rand <=2){
-            if(affected){
-                affected = false;
-                return monsterText.get(1).get(monsterText.get(1).size()-1);
-            }else{
-                affected = true;
-                return monsterText.get(1).get(random.nextInt(monsterText.get(1).size()-1));
-            }
-        }else if(rand <= 5){
-            monsterhp-=0.1;
-            return monsterText.get(3).get(random.nextInt(monsterText.get(3).size()));
-        }else{
-            hunterhp-=0.1;
-            return monsterText.get(0).get(random.nextInt(monsterText.get(0).size()));
+    private List<String> getRandomCommand() {
+        if(hunterhp <= 0){
+            hunterhp = hunterMaxHp;
+            return hunterCarts.get(random.nextInt(hunterCarts.size()));
+        }
+        if(monsterCharged && monsterChargeDurationLeft <= 0){
+            return monsterCharges.get(monsterCharges.size()-1);
+        }
+        if(statusEffectActive && statusDurationLeft <= 0){
+            return monsterStatusEffects.get(monsterStatusEffects.size()-1);
         }
 
+        List<List<String>> availableAttacks;
+        List<String> chosenAttack;
+
+        if(monsterTurn){
+            if(random.nextInt(3) == 1){
+                if(random.nextInt(2) == 1){
+                    chosenAttack = monsterCharges.get(random.nextInt(monsterCharges.size()-1));
+                    monsterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+                }else{
+                    chosenAttack = monsterStatusEffects.get(random.nextInt(monsterStatusEffects.size()-1));
+                    monsterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+                }
+            }else{
+                availableAttacks = monsterAttacks.stream().filter(n -> Integer.parseInt(n.get(n.size()-1)) <= monsterStamina)
+                        .collect(Collectors.toList());
+                chosenAttack = availableAttacks.get(random.nextInt(availableAttacks.size()));
+                monsterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+                hunterhp -= 20;
+            }
+        }else{
+            availableAttacks = hunterAttacks.stream().filter(n -> Integer.parseInt(n.get(n.size()-1)) <= hunterStamina)
+                    .collect(Collectors.toList());
+            chosenAttack = availableAttacks.get(random.nextInt(availableAttacks.size()));
+            hunterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
+            monsterhp -= 20;
+        }
+        if(monsterCharged) monsterChargeDurationLeft-=1;
+        if(statusEffectActive) statusDurationLeft-=1;
+        monsterTurn = !monsterTurn;
+        return chosenAttack.subList(0, chosenAttack.size()-1);
     }
 
 
