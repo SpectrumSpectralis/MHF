@@ -2,7 +2,9 @@ package org.mhf.mhf.logic;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,23 +43,33 @@ public class HuntController{
     @FXML
     private ProgressBar monsterStaminaProgressBar;
 
+    @FXML
+    private Slider musicVolume;
+
+    @FXML
+    private CheckBox muteMusicCheckbox;
+
     private boolean monsterTurn = true;
     private boolean monsterCharged = false;
     private boolean statusEffectActive = false;
-    private int monsterChargeDurationLeft, statusDurationLeft;
+    private int monsterChargeDurationLeft, statusDurationLeft, maxCarts, currentCarts, goalsToEndure, successDefeatCount;
     private double monsterhp, hunterhp, monsterStamina, hunterStamina;
     private double monsterMaxHp, hunterMaxHp, monsterMaxStamina, hunterMaxStamina;
     private String[] monsterInfo;
     private final String musicLocation = "src/music/";
     private final String huntLocation = "src/hunts/";
+    private FloatControl gainControl;
 
-    private List<List<String>> monsterAttacks = new ArrayList<>();
-    private List<List<String>> monsterCharges = new ArrayList<>();
-    private List<List<String>> monsterStatusEffects = new ArrayList<>();
-    private List<List<String>> hunterAttacks = new ArrayList<>();
-    private List<List<String>> hunterCarts = new ArrayList<>();
-    private List<List<String>> hunterRest = new ArrayList<>();
-    private List<List<String>> monsterRest = new ArrayList<>();
+    private final List<List<String>> monsterAttacks = new ArrayList<>();
+    private final List<List<String>> monsterCharges = new ArrayList<>();
+    private final List<List<String>> monsterStatusEffects = new ArrayList<>();
+    private final List<List<String>> monsterRest = new ArrayList<>();
+    private final List<List<String>> monsterWin = new ArrayList<>();
+    private final List<List<String>> hunterAttacks = new ArrayList<>();
+    private final List<List<String>> hunterCarts = new ArrayList<>();
+    private final List<List<String>> hunterRest = new ArrayList<>();
+    private final List<List<String>> hunterWin = new ArrayList<>();
+
 
     private Image newMonsterImage;
     private final Random random = new Random();
@@ -81,18 +94,41 @@ public class HuntController{
             return;
         }
 
+        goalsToEndure = 1;
+        successDefeatCount = 0;
+        maxCarts = Integer.parseInt(monsterInfo[4]);
+        currentCarts = 0;
         monsterMaxHp = Integer.parseInt(monsterInfo[1]);
-        monsterhp = monsterMaxHp;
-        hunterMaxHp = 100;
-        hunterhp = hunterMaxHp;
         monsterMaxStamina = Integer.parseInt(monsterInfo[2]);
+        monsterhp = monsterMaxHp;
         monsterStamina = monsterMaxStamina;
+        hunterMaxHp = 100;
         hunterMaxStamina = 50;
+        hunterhp = hunterMaxHp;
         hunterStamina = hunterMaxStamina;
 
         loadMonster();
         startMonsterThread();
         startMusicThread(monsterInfo[3]);
+
+        musicVolume.valueProperty().addListener((observableValue, oldValue, newValue) -> {
+            float range = gainControl.getMaximum() - gainControl.getMinimum();
+            float gain = (range * (newValue.floatValue()/100f)) + gainControl.getMinimum();
+            gainControl.setValue(gain);
+        });
+
+        muteMusicCheckbox.selectedProperty().addListener((observableValue, oldBool, newBool) -> {
+            if(newBool) {
+                gainControl.setValue(gainControl.getMinimum());
+            }else{
+                float range = gainControl.getMaximum() - gainControl.getMinimum();
+                float gain = (range * (musicVolume.valueProperty().floatValue()/100f)) + gainControl.getMinimum();
+                gainControl.setValue(gain);
+            }
+        });
+
+
+        musicVolume.setValue(50);
     }
 
     private void loadMonster() {
@@ -114,6 +150,10 @@ public class HuntController{
                     case "hr": hunterRest.add(l.subList(1, l.size()));
                         break;
                     case "mr": monsterRest.add(l.subList(1, l.size()));
+                        break;
+                    case "mw": monsterWin.add(l.subList(1, l.size()));
+                        break;
+                    case "hw": hunterWin.add(l.subList(1, l.size()));
                 }
             }
         } catch (IOException e) {
@@ -134,11 +174,11 @@ public class HuntController{
                 AudioInputStream audioStream = AudioSystem.getAudioInputStream(musicPath);
                 Clip clip = AudioSystem.getClip();
                 clip.open(audioStream);
-                FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                float volume = 0.5f;
+                gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
                 float range = gainControl.getMaximum() - gainControl.getMinimum();
-                float gain = (range * volume) + gainControl.getMinimum();
+                float gain = (range * 0.5f) + gainControl.getMinimum();
                 gainControl.setValue(gain);
+
                 clip.loop(Integer.MAX_VALUE);
                 int loopStartPoint = (clip.getFrameLength()/Integer.parseInt(musicInfo[1]))*Integer.parseInt(musicInfo[2]);
                 int loopEndPoint = (clip.getFrameLength()/Integer.parseInt(musicInfo[1]))*Integer.parseInt(musicInfo[3]);
@@ -156,13 +196,13 @@ public class HuntController{
         Thread monsterThread = new Thread(() -> {
             List<String> command = getRandomCommand();
             newMonsterImage = new Image(command.get(0));
-            while(monsterhp > 0){
+            int taskTime = 10;
+            while(successDefeatCount <= goalsToEndure){
                 Platform.runLater(() -> hunterHealthProgressBar.setProgress(hunterhp/hunterMaxHp));
                 Platform.runLater(() -> monsterHealthProgressBar.setProgress(monsterhp/monsterMaxHp));
                 Platform.runLater(() -> hunterStaminaProgressBar.setProgress(hunterStamina/hunterMaxStamina));
                 Platform.runLater(() -> monsterStaminaProgressBar.setProgress(monsterStamina/monsterMaxStamina));
                 monsterView.setImage(newMonsterImage);
-                int taskTime = 10;
                 huntingText.clear();
                 for(String s : command.subList(1,command.size())){
                     try{
@@ -193,8 +233,17 @@ public class HuntController{
     }
 
     private List<String> getRandomCommand() {
+        if(currentCarts >= maxCarts){
+            successDefeatCount++;
+            return monsterWin.get(random.nextInt(monsterWin.size()));
+        }
+        if(monsterhp <= 0){
+            successDefeatCount++;
+            return hunterWin.get(random.nextInt(hunterWin.size()));
+        }
         if(hunterhp <= 0){
-            hunterhp = hunterMaxHp;
+            currentCarts++;
+            if(currentCarts < maxCarts) hunterhp = hunterMaxHp;
             return hunterCarts.get(random.nextInt(hunterCarts.size()));
         }
         if(monsterCharged && monsterChargeDurationLeft <= 0){
@@ -265,7 +314,7 @@ public class HuntController{
 
     private void startTimer(int taskTime) {
         Thread timerThread = new Thread(() -> {
-           for(int i = 0; i < taskTime; i++){
+           for(int i = 0; i <= taskTime; i++){
                timer.clear();
                timer.appendText(Integer.toString(taskTime-i));
                try {
