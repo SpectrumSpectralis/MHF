@@ -8,9 +8,12 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
 
 import javax.sound.sampled.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +24,9 @@ import java.util.stream.Stream;
 
 
 public class HuntController{
+
+    @FXML
+    private AnchorPane mainPane;
 
     @FXML
     private ImageView monsterView;
@@ -49,6 +55,9 @@ public class HuntController{
     @FXML
     private CheckBox muteMusicCheckbox;
 
+    @FXML
+    private  ImageView statusEffectImageView;
+
     private boolean monsterTurn = true;
     private boolean monsterCharged = false;
     private boolean statusEffectActive = false;
@@ -58,6 +67,7 @@ public class HuntController{
     private String[] monsterInfo;
     private final String musicLocation = "src/music/";
     private final String huntLocation = "src/hunts/";
+    private final String imageLocation = "src/img/";
     private FloatControl gainControl;
 
     private final List<List<String>> monsterAttacks = new ArrayList<>();
@@ -70,6 +80,8 @@ public class HuntController{
     private final List<List<String>> hunterRest = new ArrayList<>();
     private final List<List<String>> hunterWin = new ArrayList<>();
 
+    private final List<ImageView> statusIconList = new ArrayList<>();
+
 
     private Image newMonsterImage;
     private final Random random = new Random();
@@ -81,7 +93,18 @@ public class HuntController{
     }
 
     @FXML
-    public void initialize(){
+    public void initialize() throws FileNotFoundException {
+        statusEffectImageView.setImage(new Image(new FileInputStream(imageLocation + "waterblight.png")));
+        statusIconList.add(statusEffectImageView);
+        for (int i = 1; i <= 4; i++) {
+            ImageView iv = new ImageView();
+            iv.setFitHeight(statusEffectImageView.getFitHeight());
+            iv.setFitWidth(statusEffectImageView.getFitWidth());
+            iv.setLayoutX(statusEffectImageView.getLayoutX()+statusEffectImageView.getFitWidth()*i);
+            iv.setLayoutY(statusEffectImageView.getLayoutY());
+            mainPane.getChildren().add(iv);
+            statusIconList.add(iv);
+        }
         try (Stream<String> monsterInfoStream = Files.lines(Path.of( huntLocation  + "monsterInfo.txt"))) {
             for(String s : monsterInfoStream.toList()){
                 if(s.split(";")[0].equalsIgnoreCase(monsterToHunt)){
