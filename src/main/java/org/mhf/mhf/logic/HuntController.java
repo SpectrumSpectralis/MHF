@@ -125,7 +125,7 @@ public class HuntController{
         monsterMaxStamina = Integer.parseInt(monsterInfo[2]);
         monsterhp = monsterMaxHp;
         monsterStamina = monsterMaxStamina;
-        hunterMaxHp = 100;
+        hunterMaxHp = 70;
         hunterMaxStamina = 50;
         hunterhp = hunterMaxHp;
         hunterStamina = hunterMaxStamina;
@@ -281,7 +281,7 @@ public class HuntController{
 
         if(monsterTurn){
             if(random.nextInt(3) == 1){
-                if(random.nextInt(2) == 1){
+                if(monsterStatusEffects.size() < 1 || random.nextInt(2) == 1){
                     chosenAttack = monsterCharges.get(random.nextInt(monsterCharges.size()-1));
                     monsterStamina -= Integer.parseInt(chosenAttack.get(chosenAttack.size()-1));
                 }else{
@@ -306,7 +306,7 @@ public class HuntController{
                     }
                 }
 
-                hunterhp -= 1;
+                hunterhp -= 10;
             }
         }else{
             availableAttacks = hunterAttacks.stream().filter(n -> Integer.parseInt(n.get(n.size()-1)) <= hunterStamina)

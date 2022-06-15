@@ -1,2 +1,3 @@
 Monster;maxHp;maxStamina;music;maxCarts
 TobiKadachi;100;50;GLMediumMonster;3
+Zinogre;350;50;GLMediumMonster;3

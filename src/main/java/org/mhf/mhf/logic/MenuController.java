@@ -36,7 +36,7 @@ public class MenuController {
 
     @FXML
     private void huntTeo(ActionEvent event) throws IOException {
-        HuntController.monsterToHunt="Teostra";
+        HuntController.monsterToHunt="Zinogre";
         loadHunt(event);
     }
 
