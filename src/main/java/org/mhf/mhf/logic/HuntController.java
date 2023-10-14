@@ -229,7 +229,8 @@ public class HuntController{
                 huntingText.clear();
                 for(String s : command.subList(1,command.size())){
                     try{
-                        taskTime = Integer.parseInt(s);
+                        taskTime = 10;
+                        Integer.parseInt(s);
                         break;
                     }catch(NumberFormatException nfe){
                         huntingText.appendText(s + "\n");
